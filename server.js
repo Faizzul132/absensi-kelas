@@ -1,29 +1,17 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const { db, initDb } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Setup directories
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
-
-// Multer storage configuration for letters/photos
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
+// Multer memory storage configuration for letters/photos (avoids read-only disk issues on serverless/Vercel)
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
-const upload = multer({ storage: storage });
 
 // Middleware
 app.use(express.json());
@@ -32,8 +20,19 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static HTML/CSS/Images files from workspace root
 app.use(express.static(__dirname));
 
-// Serve uploads folder statically just in case
-app.use('/uploads', express.static(uploadsDir));
+// Start DB initialization
+const dbInitPromise = initDb();
+
+// Middleware to ensure DB is initialized before processing any API requests
+app.use('/api', async (req, res, next) => {
+  try {
+    await dbInitPromise;
+    next();
+  } catch (err) {
+    console.error('Database initialization failed:', err);
+    res.status(500).json({ success: false, message: 'Database initialization failed. Please check backend logs.' });
+  }
+});
 
 // API 1: Login/Validation
 app.post('/api/login', (req, res) => {
@@ -100,10 +99,6 @@ app.post('/api/attendance-with-file', upload.single('surat'), (req, res) => {
   const file = req.file;
 
   if (!nisn || !kehadiran) {
-    // Delete file if uploaded
-    if (file) {
-      fs.unlinkSync(file.path);
-    }
     return res.status(400).json({ success: false, message: 'NISN dan status kehadiran wajib.' });
   }
 
@@ -112,27 +107,23 @@ app.post('/api/attendance-with-file', upload.single('surat'), (req, res) => {
   }
 
   try {
-    // Read the uploaded file into buffer for SQL BLOB storage
-    const fileData = fs.readFileSync(file.path);
+    // Read the uploaded file directly from memory buffer
+    const fileData = file.buffer;
 
     db.run(
       `INSERT INTO attendance (nisn, email, nama, kehadiran, alasan, surat_filename, surat_mime, surat_data) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [nisn, email, nama, kehadiran, alasan || '', file.filename, file.mimetype, fileData],
+      [nisn, email, nama, kehadiran, alasan || '', file.originalname, file.mimetype, fileData],
       function(err) {
         if (err) {
           console.error('Failed to save attendance with file:', err);
-          // Delete physical file
-          if (fs.existsSync(file.path)) {
-            fs.unlinkSync(file.path);
-          }
           return res.status(500).json({ success: false, message: 'Gagal menyimpan data kehadiran.' });
         }
         res.json({ success: true, id: this.lastID });
       }
     );
   } catch (err) {
-    console.error('File reading error:', err);
+    console.error('File buffer error:', err);
     res.status(500).json({ success: false, message: 'Gagal memproses file upload.' });
   }
 });
@@ -166,7 +157,7 @@ app.get('/api/attendance', (req, res) => {
 
 // Export app for serverless deployment (Vercel), or listen if run directly
 if (require.main === module) {
-  initDb()
+  dbInitPromise
     .then(() => {
       app.listen(PORT, () => {
         console.log(`Student attendance app is running locally at http://localhost:${PORT}`);
@@ -177,7 +168,5 @@ if (require.main === module) {
       process.exit(1);
     });
 } else {
-  // In serverless environment, database initialization runs on cold start
-  initDb().catch((err) => console.error('Database Init Error:', err));
   module.exports = app;
 }

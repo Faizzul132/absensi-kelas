@@ -1,5 +1,3 @@
-const sqlite3 = require('sqlite3').verbose();
-const { Pool } = require('pg');
 const path = require('path');
 const fs = require('fs');
 const xlsx = require('xlsx');
@@ -12,13 +10,35 @@ let dbPostgresPool;
 
 if (isPostgres) {
   console.log('Database configuration: Using PostgreSQL');
+  const { Pool } = require('pg');
   dbPostgresPool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false } // Required for hosting platforms like Neon, Railway, Supabase
   });
 } else {
   console.log('Database configuration: Using SQLite');
-  const dbPath = path.join(__dirname, 'attendance.db');
+  // Load sqlite3 dynamically to avoid runtime binary load crashes when PostgreSQL is being used on Serverless.
+  const sqlite3 = require('sqlite3').verbose();
+  let dbPath = path.join(__dirname, 'attendance.db');
+  
+  // If running on Vercel, copy database template to writable /tmp directory to avoid read-only system errors
+  if (process.env.VERCEL) {
+    const tmpDbPath = path.join('/tmp', 'attendance.db');
+    try {
+      if (!fs.existsSync(tmpDbPath)) {
+        if (fs.existsSync(dbPath)) {
+          fs.copyFileSync(dbPath, tmpDbPath);
+          console.log('Copied template attendance.db to writable path /tmp/attendance.db');
+        } else {
+          console.log('No local database template found, initializing new database at /tmp/attendance.db');
+        }
+      }
+      dbPath = tmpDbPath;
+    } catch (err) {
+      console.error('Failed to prepare writable SQLite database in /tmp:', err);
+    }
+  }
+  
   dbSQLite = new sqlite3.Database(dbPath);
 }
 

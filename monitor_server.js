@@ -8,6 +8,20 @@ const PORT = process.env.PORT || 4000;
 // Middleware
 app.use(express.json());
 
+// Start DB initialization
+const dbInitPromise = initDb();
+
+// Middleware to ensure DB is initialized before processing any API requests
+app.use('/api', async (req, res, next) => {
+  try {
+    await dbInitPromise;
+    next();
+  } catch (err) {
+    console.error('Database initialization failed:', err);
+    res.status(500).json({ success: false, message: 'Database initialization failed. Please check backend logs.' });
+  }
+});
+
 // Serve monitor.html when accessing the root /
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'monitor.html'));
