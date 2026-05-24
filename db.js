@@ -1,15 +1,13 @@
 const path = require('path');
 const fs = require('fs');
 
-// ── Guard: Vercel WAJIB menggunakan PostgreSQL ─────────────────────────────────
-if (process.env.VERCEL && !process.env.DATABASE_URL) {
+// ── Guard: Railway/Produksi WAJIB menggunakan PostgreSQL ───────────────────────
+if ((process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production') && !process.env.DATABASE_URL) {
   throw new Error(
-    '[FATAL] DATABASE_URL belum diset di Vercel!\n' +
-    '1. Buka https://neon.tech → buat project gratis\n' +
-    '2. Copy connection string PostgreSQL-nya\n' +
-    '3. Buka Vercel Dashboard → project → Settings → Environment Variables\n' +
-    '4. Tambah: NAME=DATABASE_URL, VALUE=<connection string neon>\n' +
-    '5. Redeploy'
+    '[FATAL] DATABASE_URL belum diset di Railway/Production!\n' +
+    '1. Pastikan Anda sudah menambahkan PostgreSQL database di project Railway Anda.\n' +
+    '2. Hubungkan service PostgreSQL tersebut ke service Node.js Anda.\n' +
+    '3. Railway akan otomatis menginjeksi variabel DATABASE_URL.'
   );
 }
 
@@ -45,19 +43,7 @@ if (isPostgres) {
 
   let dbPath = path.join(__dirname, 'attendance.db');
 
-  if (process.env.VERCEL) {
-    // Fallback jika somehow VERCEL=true tapi DATABASE_URL ada (edge case)
-    const tmpDbPath = '/tmp/attendance.db';
-    try {
-      if (!fs.existsSync(tmpDbPath) && fs.existsSync(dbPath)) {
-        fs.copyFileSync(dbPath, tmpDbPath);
-        console.log('[DB] Copied attendance.db to /tmp/');
-      }
-      dbPath = tmpDbPath;
-    } catch (e) {
-      console.error('[DB] Failed to copy to /tmp:', e.message);
-    }
-  }
+  // SQLite data tidak persisten di cloud container, hanya untuk local development.
 
   dbSQLite = new sqlite3.Database(dbPath, (err) => {
     if (err) console.error('[DB] SQLite open error:', err.message);

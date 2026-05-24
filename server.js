@@ -36,6 +36,15 @@ app.use('/api', async (req, res, next) => {
   }
 });
 
+// Health check endpoint (for verification on Railway)
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    database: process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // ── API 1: Login ──────────────────────────────────────────────────────────────
 app.post('/api/login', (req, res) => {
   const { email, nisn, password } = req.body;
