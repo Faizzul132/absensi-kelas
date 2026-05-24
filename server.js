@@ -38,10 +38,21 @@ app.use('/api', async (req, res, next) => {
 
 // Health check endpoint (for verification on Railway)
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    database: process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite',
-    timestamp: new Date().toISOString()
+  db.get('SELECT COUNT(*) AS count FROM students', [], (err, row) => {
+    if (err) {
+      return res.status(500).json({
+        status: 'error',
+        database: process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite',
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+    res.json({
+      status: 'ok',
+      database: process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite',
+      studentCount: row ? parseInt(row.count, 10) : 0,
+      timestamp: new Date().toISOString()
+    });
   });
 });
 
