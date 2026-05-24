@@ -1,36 +1,32 @@
 const path = require('path');
 const fs = require('fs');
-const xlsx = require('xlsx');
 
-const isPostgres = process.env.DATABASE_URL && 
+const isPostgres = process.env.DATABASE_URL &&
   (process.env.DATABASE_URL.startsWith('postgres://') || process.env.DATABASE_URL.startsWith('postgresql://'));
 
 let dbSQLite;
 let dbPostgresPool;
 
 if (isPostgres) {
-  console.log('Database configuration: Using PostgreSQL');
+  console.log('Database configuration: Using PostgreSQL (Neon)');
   const { Pool } = require('pg');
   dbPostgresPool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false } // Required for hosting platforms like Neon, Railway, Supabase
+    ssl: { rejectUnauthorized: false }
   });
 } else {
-  console.log('Database configuration: Using SQLite');
-  // Load sqlite3 dynamically to avoid runtime binary load crashes when PostgreSQL is being used on Serverless.
+  console.log('Database configuration: Using SQLite (local dev)');
   const sqlite3 = require('sqlite3').verbose();
   let dbPath = path.join(__dirname, 'attendance.db');
-  
-  // If running on Vercel, copy database template to writable /tmp directory to avoid read-only system errors
+
+  // If running on Vercel, use writable /tmp directory
   if (process.env.VERCEL) {
     const tmpDbPath = path.join('/tmp', 'attendance.db');
     try {
       if (!fs.existsSync(tmpDbPath)) {
         if (fs.existsSync(dbPath)) {
           fs.copyFileSync(dbPath, tmpDbPath);
-          console.log('Copied template attendance.db to writable path /tmp/attendance.db');
-        } else {
-          console.log('No local database template found, initializing new database at /tmp/attendance.db');
+          console.log('Copied attendance.db to /tmp/attendance.db');
         }
       }
       dbPath = tmpDbPath;
@@ -38,28 +34,31 @@ if (isPostgres) {
       console.error('Failed to prepare writable SQLite database in /tmp:', err);
     }
   }
-  
+
   dbSQLite = new sqlite3.Database(dbPath);
 }
 
-// Convert SQLite style ? placeholders to Postgres style $1, $2
+// Convert SQLite ? placeholders to Postgres $1, $2, ...
 function convertSql(sql) {
   if (!isPostgres) return sql;
   let index = 1;
   return sql.replace(/\?/g, () => `$${index++}`);
 }
 
-// Unified Database Helpers
+// --- Unified DB helpers (Promise-based) ---
+
 function dbRun(sql, params = []) {
   return new Promise((resolve, reject) => {
     const converted = convertSql(sql);
     if (isPostgres) {
       dbPostgresPool.query(converted, params, (err, res) => {
         if (err) return reject(err);
-        resolve({ lastID: res.insertId || null, changes: res.rowCount });
+        // For INSERT ... RETURNING id
+        const lastID = res.rows && res.rows[0] ? res.rows[0].id : null;
+        resolve({ lastID, changes: res.rowCount });
       });
     } else {
-      dbSQLite.run(converted, params, function(err) {
+      dbSQLite.run(converted, params, function (err) {
         if (err) return reject(err);
         resolve({ lastID: this.lastID, changes: this.changes });
       });
@@ -84,7 +83,6 @@ function dbGet(sql, params = []) {
   });
 }
 
-// Rename helper from dbAll to avoid conflict with standard exports
 function dbAllRows(sql, params = []) {
   return new Promise((resolve, reject) => {
     const converted = convertSql(sql);
@@ -102,74 +100,78 @@ function dbAllRows(sql, params = []) {
   });
 }
 
-// Create database schema
-function initDb() {
-  return new Promise(async (resolve, reject) => {
-    try {
-      // Create students table
-      await dbRun(`
-        CREATE TABLE IF NOT EXISTS students (
-          nisn TEXT PRIMARY KEY,
-          nama TEXT,
-          password TEXT,
-          kelas TEXT
-        )
-      `);
+// --- Schema Initialization ---
 
-      // Create attendance table with db-specific types
-      const attendanceSql = isPostgres 
-        ? `CREATE TABLE IF NOT EXISTS attendance (
-            id SERIAL PRIMARY KEY,
-            nisn TEXT,
-            email TEXT,
-            nama TEXT,
-            kehadiran TEXT,
-            alasan TEXT,
-            surat_filename TEXT,
-            surat_mime TEXT,
-            surat_data BYTEA,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-           )`
-        : `CREATE TABLE IF NOT EXISTS attendance (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nisn TEXT,
-            email TEXT,
-            nama TEXT,
-            kehadiran TEXT,
-            alasan TEXT,
-            surat_filename TEXT,
-            surat_mime TEXT,
-            surat_data BLOB,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-           )`;
+async function initDb() {
+  // Create students table
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS students (
+      nisn TEXT PRIMARY KEY,
+      nama TEXT,
+      password TEXT,
+      kelas TEXT
+    )
+  `);
 
-      await dbRun(attendanceSql);
+  // Create attendance table
+  const attendanceSql = isPostgres
+    ? `CREATE TABLE IF NOT EXISTS attendance (
+        id SERIAL PRIMARY KEY,
+        nisn TEXT,
+        email TEXT,
+        nama TEXT,
+        kehadiran TEXT,
+        alasan TEXT,
+        surat_filename TEXT,
+        surat_mime TEXT,
+        surat_data BYTEA,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+       )`
+    : `CREATE TABLE IF NOT EXISTS attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nisn TEXT,
+        email TEXT,
+        nama TEXT,
+        kehadiran TEXT,
+        alasan TEXT,
+        surat_filename TEXT,
+        surat_mime TEXT,
+        surat_data BLOB,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+       )`;
 
-      // Import Excel data if students table is empty
-      await importExcelData();
-      resolve();
-    } catch (err) {
-      reject(err);
-    }
-  });
+  await dbRun(attendanceSql);
+
+  // Import Excel data if students table is empty
+  await importExcelData();
 }
 
 async function importExcelData() {
-  const row = await dbGet('SELECT COUNT(*) as count FROM students');
-  const count = row ? parseInt(row.count) : 0;
-  
-  if (count > 0) {
-    console.log('Students data already exists in database. Skipping import.');
+  // xlsx is optional (not available in production if not installed)
+  let xlsx;
+  try {
+    xlsx = require('xlsx');
+  } catch (e) {
+    console.warn('xlsx module not found, skipping Excel import.');
     return;
   }
 
-  console.log('Importing students from Excel...');
+  const row = await dbGet('SELECT COUNT(*) AS count FROM students');
+  // Postgres returns count as string, SQLite as number
+  const count = row ? parseInt(row.count, 10) : 0;
+
+  if (count > 0) {
+    console.log('Students data already exists. Skipping Excel import.');
+    return;
+  }
+
   const excelPath = path.join(__dirname, 'Data Siswa X-5 (3).xlsx');
   if (!fs.existsSync(excelPath)) {
     console.warn(`Excel file not found at ${excelPath}. Skipping import.`);
     return;
   }
 
+  console.log('Importing students from Excel...');
   const workbook = xlsx.readFile(excelPath);
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
@@ -184,10 +186,10 @@ async function importExcelData() {
     if (nisn && password) {
       if (isPostgres) {
         await dbRun(
-          `INSERT INTO students (nisn, nama, password, kelas) 
-           VALUES (?, ?, ?, ?) 
-           ON CONFLICT (nisn) DO UPDATE SET nama = ?, password = ?, kelas = ?`,
-          [nisn, nama, password, kelas, nama, password, kelas]
+          `INSERT INTO students (nisn, nama, password, kelas)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT (nisn) DO UPDATE SET nama = EXCLUDED.nama, password = EXCLUDED.password, kelas = EXCLUDED.kelas`,
+          [nisn, nama, password, kelas]
         );
       } else {
         await dbRun(
@@ -197,22 +199,34 @@ async function importExcelData() {
       }
     }
   }
-  console.log(`Successfully imported student credentials to database.`);
+  console.log('Successfully imported student credentials.');
 }
+
+// --- Callback-style wrapper (used by server.js) ---
 
 module.exports = {
   db: {
     run: (sql, params, cb) => {
-      dbRun(sql, params).then(res => cb(null, res)).catch(cb);
+      // Build correct INSERT ... RETURNING id for postgres
+      let finalSql = sql;
+      if (isPostgres && /^\s*INSERT/i.test(sql) && !/RETURNING/i.test(sql)) {
+        finalSql = sql.trimEnd().replace(/;?\s*$/, '') + ' RETURNING id';
+      }
+      dbRun(finalSql, params)
+        .then(res => cb(null, res))
+        .catch(cb);
     },
     get: (sql, params, cb) => {
-      dbGet(sql, params).then(res => cb(null, res)).catch(cb);
+      dbGet(sql, params)
+        .then(res => cb(null, res))
+        .catch(cb);
     },
     all: (sql, params, cb) => {
-      // Allow arity with 2 arguments (sql, cb)
       const callback = typeof params === 'function' ? params : cb;
       const args = typeof params === 'function' ? [] : params;
-      dbAllRows(sql, args).then(res => callback(null, res)).catch(callback);
+      dbAllRows(sql, args)
+        .then(res => callback(null, res))
+        .catch(callback);
     }
   },
   initDb

@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Local database (don't push SQLite to git — use PostgreSQL on Vercel)
+# attendance.db  ← BOLEH di-commit agar data awal siswa tersedia di /tmp saat cold start Vercel
+
+# Environment variables (JANGAN pernah commit file ini!)
+.env
+.env.local
+.env.production
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/settings.json
+*.log

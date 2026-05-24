@@ -6,38 +6,40 @@ const { db, initDb } = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Multer memory storage configuration for letters/photos (avoids read-only disk issues on serverless/Vercel)
+// Multer: memory storage (serverless-safe)
 const storage = multer.memoryStorage();
-const upload = multer({ 
+const upload = multer({
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static HTML/CSS/Images files from workspace root
-app.use(express.static(__dirname));
+// Serve static files from project root (HTML, CSS, images)
+app.use(express.static(path.join(__dirname)));
 
-// Start DB initialization
-const dbInitPromise = initDb();
+// Initialize DB
+const dbInitPromise = initDb().catch(err => {
+  console.error('DB init failed:', err);
+});
 
-// Middleware to ensure DB is initialized before processing any API requests
+// Ensure DB ready before all API calls
 app.use('/api', async (req, res, next) => {
   try {
     await dbInitPromise;
     next();
   } catch (err) {
     console.error('Database initialization failed:', err);
-    res.status(500).json({ success: false, message: 'Database initialization failed. Please check backend logs.' });
+    res.status(500).json({ success: false, message: 'Database initialization failed.' });
   }
 });
 
-// API 1: Login/Validation
+// ── API 1: Login ──────────────────────────────────────────────────────────────
 app.post('/api/login', (req, res) => {
   const { email, nisn, password } = req.body;
-  
+
   if (!nisn || !password) {
     return res.status(400).json({ success: false, message: 'NISN dan password wajib diisi.' });
   }
@@ -50,28 +52,21 @@ app.post('/api/login', (req, res) => {
     [cleanNisn, cleanPassword],
     (err, student) => {
       if (err) {
-        console.error('Database query error:', err);
+        console.error('DB query error:', err);
         return res.status(500).json({ success: false, message: 'Internal server error.' });
       }
-
       if (!student) {
         return res.status(401).json({ success: false, message: 'NISN atau Password salah.' });
       }
-
-      // Success
       return res.json({
         success: true,
-        student: {
-          nisn: student.nisn,
-          nama: student.nama,
-          kelas: student.kelas
-        }
+        student: { nisn: student.nisn, nama: student.nama, kelas: student.kelas }
       });
     }
   );
 });
 
-// API 2: Standard Attendance (for Hadir - no file)
+// ── API 2: Attendance (Hadir) ─────────────────────────────────────────────────
 app.post('/api/attendance', (req, res) => {
   const { nisn, email, nama, kehadiran, alasan } = req.body;
 
@@ -80,10 +75,9 @@ app.post('/api/attendance', (req, res) => {
   }
 
   db.run(
-    `INSERT INTO attendance (nisn, email, nama, kehadiran, alasan) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO attendance (nisn, email, nama, kehadiran, alasan) VALUES (?, ?, ?, ?, ?)`,
     [nisn, email, nama, kehadiran, alasan || ''],
-    function(err) {
+    function (err) {
       if (err) {
         console.error('Failed to save attendance:', err);
         return res.status(500).json({ success: false, message: 'Gagal menyimpan data kehadiran.' });
@@ -93,7 +87,7 @@ app.post('/api/attendance', (req, res) => {
   );
 });
 
-// API 3: Attendance with File Upload (for Sakit / Izin)
+// ── API 3: Attendance with File (Sakit/Izin) ──────────────────────────────────
 app.post('/api/attendance-with-file', upload.single('surat'), (req, res) => {
   const { nisn, email, nama, kehadiran, alasan } = req.body;
   const file = req.file;
@@ -101,20 +95,18 @@ app.post('/api/attendance-with-file', upload.single('surat'), (req, res) => {
   if (!nisn || !kehadiran) {
     return res.status(400).json({ success: false, message: 'NISN dan status kehadiran wajib.' });
   }
-
   if (!file) {
     return res.status(400).json({ success: false, message: 'Surat bukti (gambar) wajib diupload.' });
   }
 
   try {
-    // Read the uploaded file directly from memory buffer
     const fileData = file.buffer;
 
     db.run(
-      `INSERT INTO attendance (nisn, email, nama, kehadiran, alasan, surat_filename, surat_mime, surat_data) 
+      `INSERT INTO attendance (nisn, email, nama, kehadiran, alasan, surat_filename, surat_mime, surat_data)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [nisn, email, nama, kehadiran, alasan || '', file.originalname, file.mimetype, fileData],
-      function(err) {
+      function (err) {
         if (err) {
           console.error('Failed to save attendance with file:', err);
           return res.status(500).json({ success: false, message: 'Gagal menyimpan data kehadiran.' });
@@ -128,7 +120,7 @@ app.post('/api/attendance-with-file', upload.single('surat'), (req, res) => {
   }
 });
 
-// API 4: Stream letter image from SQLite database
+// ── API 4: Stream surat image ─────────────────────────────────────────────────
 app.get('/api/attendance/surat/:id', (req, res) => {
   const { id } = req.params;
   db.get('SELECT surat_mime, surat_data FROM attendance WHERE id = ?', [id], (err, row) => {
@@ -144,29 +136,32 @@ app.get('/api/attendance/surat/:id', (req, res) => {
   });
 });
 
-// API 5: Retrieve all attendance records (shared or for monitoring)
+// ── API 5: Get all attendance records ─────────────────────────────────────────
 app.get('/api/attendance', (req, res) => {
-  db.all('SELECT id, nisn, email, nama, kehadiran, alasan, surat_filename, created_at FROM attendance ORDER BY created_at DESC', (err, rows) => {
-    if (err) {
-      console.error('Failed to query attendance:', err);
-      return res.status(500).json({ success: false, message: 'Gagal mengambil data.' });
+  db.all(
+    'SELECT id, nisn, email, nama, kehadiran, alasan, surat_filename, created_at FROM attendance ORDER BY created_at DESC',
+    (err, rows) => {
+      if (err) {
+        console.error('Failed to query attendance:', err);
+        return res.status(500).json({ success: false, message: 'Gagal mengambil data.' });
+      }
+      res.json(rows);
     }
-    res.json(rows);
-  });
+  );
 });
 
-// Export app for serverless deployment (Vercel), or listen if run directly
-if (require.main === module) {
-  dbInitPromise
-    .then(() => {
-      app.listen(PORT, () => {
-        console.log(`Student attendance app is running locally at http://localhost:${PORT}`);
-      });
-    })
-    .catch((err) => {
-      console.error('Failed to initialize database:', err);
-      process.exit(1);
-    });
-} else {
-  module.exports = app;
-}
+// ── Monitor dashboard route ───────────────────────────────────────────────────
+app.get('/monitor', (req, res) => {
+  res.sendFile(path.join(__dirname, 'monitor.html'));
+});
+
+// Start server (local dev only)
+dbInitPromise.then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Monitor dashboard: http://localhost:${PORT}/monitor`);
+  });
+}).catch(err => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
+});
