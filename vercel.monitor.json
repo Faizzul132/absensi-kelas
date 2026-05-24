@@ -1,13 +1,27 @@
 {
   "version": 2,
-  "rewrites": [
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/monitor.js"
+      "src": "api/monitor.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/monitor.js"
     },
     {
-      "source": "/",
-      "destination": "/monitor.html"
+      "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf))",
+      "dest": "/$1"
+    },
+    {
+      "src": "/monitor.html",
+      "dest": "/monitor.html"
+    },
+    {
+      "src": "/",
+      "dest": "/monitor.html"
     }
   ]
 }
