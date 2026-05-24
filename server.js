@@ -38,12 +38,28 @@ app.use('/api', async (req, res, next) => {
 
 // Health check endpoint (for verification on Railway)
 app.get('/api/health', (req, res) => {
+  const fs = require('fs');
+  const excelPath = path.join(__dirname, 'Data Siswa X-5 (3).xlsx');
+  const excelExists = fs.existsSync(excelPath);
+  
+  let xlsxLoaded = false;
+  let xlsxError = null;
+  try {
+    require('xlsx');
+    xlsxLoaded = true;
+  } catch (e) {
+    xlsxError = e.message;
+  }
+
   db.get('SELECT COUNT(*) AS count FROM students', [], (err, row) => {
     if (err) {
       return res.status(500).json({
         status: 'error',
         database: process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite',
         error: err.message,
+        excelExists,
+        xlsxLoaded,
+        xlsxError,
         timestamp: new Date().toISOString()
       });
     }
@@ -51,6 +67,10 @@ app.get('/api/health', (req, res) => {
       status: 'ok',
       database: process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite',
       studentCount: row ? parseInt(row.count, 10) : 0,
+      excelExists,
+      xlsxLoaded,
+      xlsxError,
+      excelPath,
       timestamp: new Date().toISOString()
     });
   });
