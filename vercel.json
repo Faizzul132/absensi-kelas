@@ -1,28 +1,5 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/student.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/monitor.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    { "src": "/api/attendance/surat/(.*)", "dest": "/api/student.js" },
-    { "src": "/api/attendance-with-file", "dest": "/api/student.js" },
-    { "src": "/api/attendance(.*)", "dest": "/api/student.js" },
-    { "src": "/api/login", "dest": "/api/student.js" },
-    { "src": "/monitor/api/(.*)", "dest": "/api/monitor.js" },
-    { "src": "/monitor", "dest": "/monitor.html" },
-    { "src": "/monitor\\.html", "dest": "/monitor.html" },
-    { "src": "/(.*\\.html)", "dest": "/$1" },
-    { "src": "/(.*\\.css)", "dest": "/$1" },
-    { "src": "/(.*\\.png)", "dest": "/$1" },
-    { "src": "/(.*\\.jpg)", "dest": "/$1" },
-    { "src": "/(.*\\.ico)", "dest": "/$1" },
-    { "src": "/", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/student.js" }
   ]
 }
