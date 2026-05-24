@@ -21,7 +21,7 @@ body {
   height: 896px;
   background-image: url('hal\ 3.png');
   background-repeat: no-repeat;
-  background-size: 414px 896px;
+  background-size: 100% 100%;
   position: relative;
   overflow: hidden;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
@@ -43,46 +43,66 @@ body {
 }
 
 .input {
-    margin-top: 349.5px;
-    margin-left: 62.4px;
+  position: absolute;
+  top: 39.0%;
+  left: 15.1%;
+  width: 70.3%;
+  height: 6.9%;
+  margin: 0;
 }
 
 .input_nama {
-    margin-top: 0;
-    background-color: #10519a;
-    border-radius: 15px;
-    font-size: medium;
-    border: 0px;
-    width: 291px;
-    height: 62.1px;
-    opacity: 0.76;
-    padding: 20px;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    text-align: center;
-    font-family: sans-serif;
+  margin: 0;
+  background-color: #10519a;
+  border-radius: 15px;
+  font-size: 16px;
+  border: 1px solid transparent;
+  width: 100%;
+  height: 100%;
+  opacity: 0.76;
+  padding: 0 20px;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.3s ease;
 }
 
-  .input_kehadiran {
-    margin-top: 60px;
-  }
+.input_nama:hover {
+  opacity: 0.95;
+  border-color: #bae6fd;
+  box-shadow: 0 0 15px rgba(29, 114, 214, 0.4);
+}
 
- .input_alasan {
-    margin-top: 60px;
- }
-
- .tombol_next {
-  margin-top: 405.7px;
-  margin-left: 273.6px;
-  width: 105.8px;
-  height: 39.6px;
+.tombol_next {
+  position: absolute;
+  top: 91.2%;
+  left: 66.1%;
+  width: 25.6%;
+  height: 4.4%;
+  margin: 0;
   border: 0;
   border-radius: 19px;
   background-color: #10519a;
   color: white;
-  font-size: large;
+  font-size: 16px;
   font-weight: bolder;
- }
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tombol_next:hover {
+  background-color: #1d72d6;
+  transform: scale(1.05);
+  box-shadow: 0 6px 12px rgba(29, 114, 214, 0.3);
+}
+
+.tombol_next:active {
+  transform: scale(0.95);
+}
