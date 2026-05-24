@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presensi Siswa</title>
+    <!-- Import Google Font Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style3.css?v=2">
+</head>
+<body>
+    <div class="phone-container">
+        <div class="input">
+                <input type="file" id="input_file" style="display: none;" accept="image/*">
+                <div class="input_nama" id="upload_box">
+                    Pilih Foto Surat (Bukti)
+                </div>
+                <!-- untuk apload gambar -->
+        </div>
+        <button class="tombol_next" id="btn_next">Next</button>
+
+        <div id="error_modal" style="display:none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: #ff3333; color: white; padding: 15px 25px; border-radius: 8px; font-family: sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.2); z-index: 1000; font-weight: bold; transition: all 0.3s ease;">
+            Error message
+        </div>
+    </div>
+
+    <script>
+        // Check session
+        const nisn = sessionStorage.getItem('student_nisn');
+        const email = sessionStorage.getItem('student_email');
+        const nama = sessionStorage.getItem('student_nama');
+        const kehadiran = sessionStorage.getItem('attendance_kehadiran');
+        const alasan = sessionStorage.getItem('attendance_alasan');
+
+        if (!nisn || !email || !nama) {
+            alert('Silakan login terlebih dahulu!');
+            window.location.href = 'index.html';
+        }
+
+        if (kehadiran === 'Hadir') {
+            // Should not be on this page if present
+            window.location.href = 'index4.html';
+        }
+
+        const fileInput = document.getElementById('input_file');
+        const uploadBox = document.getElementById('upload_box');
+        const errorModal = document.getElementById('error_modal');
+
+        function showError(msg) {
+            errorModal.textContent = msg;
+            errorModal.style.display = 'block';
+            setTimeout(() => {
+                errorModal.style.display = 'none';
+            }, 4000);
+        }
+
+        // Trigger file input click when upload box is clicked
+        uploadBox.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Show filename when file is chosen
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files && fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                uploadBox.textContent = file.name;
+                uploadBox.style.fontSize = '12px'; // Adjust font size for long filenames
+            } else {
+                uploadBox.textContent = 'Pilih Foto Surat (Bukti)';
+                uploadBox.style.fontSize = 'medium';
+            }
+        });
+
+        document.getElementById('btn_next').addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showError('Anda harus memilih file surat bukti terlebih dahulu!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('nisn', nisn);
+            formData.append('email', email);
+            formData.append('nama', nama);
+            formData.append('kehadiran', kehadiran);
+            formData.append('alasan', alasan);
+            formData.append('surat', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/api/attendance-with-file', {
+                    method: 'POST',
+                    body: formData // Fetch sets correct multipart/form-data boundary automatically
+                });
+
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    // Success, go to index4.html
+                    window.location.href = 'index4.html';
+                } else {
+                    showError(result.message || 'Gagal mengirim data kehadiran.');
+                }
+            } catch (err) {
+                console.error(err);
+                showError('Gagal menghubungi server.');
+            }
+        });
+    </script>
+</body>
+</html>

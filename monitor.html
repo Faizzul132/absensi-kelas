@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Monitoring Kehadiran Siswa</title>
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-primary: #0a0f1d;
+            --bg-secondary: #131a30;
+            --bg-card: #1b2440;
+            --text-primary: #ffffff;
+            --text-secondary: #8b9bb4;
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --transition-speed: 0.3s;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            opacity: 0.98;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .logo-title h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: linear-gradient(to right, #ffffff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-title p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 8px 16px;
+            border-radius: 50px;
+            border: 1px solid var(--border-color);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            font-size: 14px;
+        }
+
+        .user-info span {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Container Layout */
+        .dashboard-container {
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 40px;
+            flex: 1;
+        }
+
+        /* Stats Section */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background-color: var(--bg-card);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: transparent;
+        }
+
+        .stat-card.blue::before { background: var(--primary-color); }
+        .stat-card.green::before { background: var(--success-color); }
+        .stat-card.yellow::before { background: var(--warning-color); }
+        .stat-card.red::before { background: var(--danger-color); }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stat-title {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .blue .stat-icon { background: rgba(59, 130, 246, 0.1); color: var(--primary-color); }
+        .green .stat-icon { background: rgba(16, 185, 129, 0.1); color: var(--success-color); }
+        .yellow .stat-icon { background: rgba(245, 158, 11, 0.1); color: var(--warning-color); }
+        .red .stat-icon { background: rgba(239, 68, 68, 0.1); color: var(--danger-color); }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+        }
+
+        .stat-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Filter Controls */
+        .controls-section {
+            background-color: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .search-input {
+            width: 100%;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 16px 12px 48px;
+            color: white;
+            font-size: 14px;
+            transition: all var(--transition-speed);
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .filter-options {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .filter-select {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 20px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+        }
+
+        .filter-select:focus {
+            border-color: var(--primary-color);
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all var(--transition-speed);
+        }
+
+        .export-btn:hover {
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Data Table Container */
+        .table-container {
+            background-color: var(--bg-secondary);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background-color: rgba(255, 255, 255, 0.02);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr {
+            transition: background-color var(--transition-speed);
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.015);
+        }
+
+        .student-name-col {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .student-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+            color: white;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+        }
+
+        .student-email {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: block;
+            margin-top: 2px;
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .badge i {
+            font-size: 10px;
+        }
+
+        .badge-hadir {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .badge-sakit {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .badge-izin {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary-color);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        /* Actions */
+        .btn-view-doc {
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all var(--transition-speed);
+        }
+
+        .btn-view-doc:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-view-doc.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* Custom Modal for Image Preview */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(6, 9, 22, 0.85);
+            backdrop-filter: blur(10px);
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            max-width: 600px;
+            width: 90%;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title h3 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-title p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .close-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background var(--transition-speed);
+        }
+
+        .close-btn:hover {
+            background: var(--danger-color);
+        }
+
+        .modal-body {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .img-wrapper {
+            width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .preview-img {
+            max-width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+        }
+
+        .modal-footer {
+            padding: 20px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-action {
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-cancel {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-cancel:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-download {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+        }
+
+        .btn-download:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Empty State */
+        .empty-state {
+            padding: 60px 40px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--text-secondary), var(--border-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .empty-state h3 {
+            color: white;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            border-top: 1px solid var(--border-color);
+            margin-top: auto;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 15px 20px;
+            }
+            .dashboard-container {
+                padding: 20px;
+            }
+            .controls-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filter-options {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header navigation -->
+    <header>
+        <div class="logo-section">
+            <div class="logo-icon">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div class="logo-title">
+                <h1>Presensi X-5</h1>
+                <p>Teacher Attendance Dashboard</p>
+            </div>
+        </div>
+        <div class="user-profile">
+            <div class="user-avatar">AD</div>
+            <div class="user-info">
+                <span>Administrator</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content area -->
+    <main class="dashboard-container">
+        
+        <!-- Live Stats Dashboard -->
+        <section class="stats-grid">
+            <div class="stat-card blue">
+                <div class="stat-header">
+                    <span class="stat-title">Total Hadir</span>
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-user-check"></i>
+                    </div>
+                </div>
+                <div class="stat-value" id="stat_hadir">0</div>
+                <div class="stat-desc">Siswa yang hadir hari ini</div>
+            </div>
+
+            <div class="stat-card yellow">
+                <div class="stat-header">
+                    <span class="stat-title">Total Sakit</span>
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-house-medical"></i>
+                    </div>
+                </div>
+                <div class="stat-value" id="stat_sakit">0</div>
+                <div class="stat-desc">Siswa absen karena sakit</div>
+            </div>
+
+            <div class="stat-card green">
+                <div class="stat-header">
+                    <span class="stat-title">Total Izin</span>
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-envelope-open-text"></i>
+                    </div>
+                </div>
+                <div class="stat-value" id="stat_izin">0</div>
+                <div class="stat-desc">Siswa izin dengan keterangan</div>
+            </div>
+
+            <div class="stat-card red">
+                <div class="stat-header">
+                    <span class="stat-title">Persentase Kehadiran</span>
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-chart-pie"></i>
+                    </div>
+                </div>
+                <div class="stat-value" id="stat_rate">0%</div>
+                <div class="stat-desc">Rasio tingkat kehadiran hari ini</div>
+            </div>
+        </section>
+
+        <!-- Filters section -->
+        <section class="controls-section">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="search_input" class="search-input" placeholder="Cari berdasarkan NISN atau Nama Siswa...">
+            </div>
+            
+            <div class="filter-options">
+                <select id="filter_kehadiran" class="filter-select">
+                    <option value="all">Semua Status</option>
+                    <option value="Hadir">Hadir</option>
+                    <option value="Sakit">Sakit</option>
+                    <option value="Izin">Izin</option>
+                </select>
+
+                <button id="btn_export" class="export-btn">
+                    <i class="fa-solid fa-file-csv"></i>
+                    Export CSV
+                </button>
+            </div>
+        </section>
+
+        <!-- Data table of submissions -->
+        <section class="table-container">
+            <table id="attendance_table">
+                <thead>
+                    <tr>
+                        <th>Siswa</th>
+                        <th>NISN</th>
+                        <th>Status</th>
+                        <th>Alasan</th>
+                        <th>Waktu Presensi</th>
+                        <th>Surat Bukti</th>
+                    </tr>
+                </thead>
+                <tbody id="table_body">
+                    <!-- Dynamic Rows Insertion -->
+                </tbody>
+            </table>
+            
+            <!-- Empty state fallback -->
+            <div id="empty_state" class="empty-state" style="display: none;">
+                <div class="empty-icon">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <h3>Belum Ada Data</h3>
+                <p>Belum ada rekaman presensi siswa yang terdaftar hari ini.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Custom View Image modal -->
+    <div id="preview_modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <h3 id="modal_student_name">Surat Keterangan</h3>
+                    <p id="modal_student_info">NISN: -</p>
+                </div>
+                <button class="close-btn" id="modal_close_btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="img-wrapper">
+                    <img id="modal_img" class="preview-img" src="" alt="Bukti Surat Siswa">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-action btn-cancel" id="modal_cancel_btn">Tutup</button>
+                <a href="" id="modal_download_btn" class="btn-action btn-download" download>
+                    <i class="fa-solid fa-download"></i>
+                    Unduh Gambar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Copyright -->
+    <footer>
+        <p>&copy; 2026 Admin Presensi Siswa X-5. Seluruh Hak Cipta Dilindungi.</p>
+    </footer>
+
+    <script>
+        let attendanceData = [];
+
+        // Fetch attendance records from backend API
+        async function fetchAttendance() {
+            try {
+                const response = await fetch('/api/attendance');
+                if (!response.ok) throw new Error('Failed to fetch data');
+                
+                attendanceData = await response.json();
+                renderDashboard();
+            } catch (err) {
+                console.error(err);
+                alert('Gagal mengambil data presensi dari server. Silakan muat ulang halaman.');
+            }
+        }
+
+        // Generate Initials Avatar
+        function getInitials(name) {
+            if (!name) return 'S';
+            const parts = name.trim().split(' ');
+            if (parts.length > 1) {
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+            }
+            return parts[0][0].toUpperCase();
+        }
+
+        // Render cards stats and table rows with filtering
+        function renderDashboard() {
+            const searchQuery = document.getElementById('search_input').value.toLowerCase();
+            const filterValue = document.getElementById('filter_kehadiran').value;
+            const tableBody = document.getElementById('table_body');
+            const emptyState = document.getElementById('empty_state');
+            
+            // 1. Calculate stats cards (on full dataset)
+            let totalHadir = 0;
+            let totalSakit = 0;
+            let totalIzin = 0;
+
+            attendanceData.forEach(item => {
+                if (item.kehadiran === 'Hadir') totalHadir++;
+                else if (item.kehadiran === 'Sakit') totalSakit++;
+                else if (item.kehadiran === 'Izin') totalIzin++;
+            });
+
+            const totalActive = totalHadir + totalSakit + totalIzin;
+            const rate = totalActive > 0 ? Math.round((totalHadir / totalActive) * 100) : 0;
+
+            document.getElementById('stat_hadir').textContent = totalHadir;
+            document.getElementById('stat_sakit').textContent = totalSakit;
+            document.getElementById('stat_izin').textContent = totalIzin;
+            document.getElementById('stat_rate').textContent = `${rate}%`;
+
+            // 2. Filter dataset for rendering table
+            const filteredData = attendanceData.filter(item => {
+                const matchesSearch = item.nama.toLowerCase().includes(searchQuery) || item.nisn.toString().includes(searchQuery);
+                const matchesFilter = filterValue === 'all' || item.kehadiran === filterValue;
+                return matchesSearch && matchesFilter;
+            });
+
+            // 3. Clear and Render table body
+            tableBody.innerHTML = '';
+
+            if (filteredData.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            } else {
+                emptyState.style.display = 'none';
+            }
+
+            filteredData.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                // Format Date
+                const dateObj = new Date(row.created_at);
+                const timeString = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                const dateString = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                const formattedTime = `${dateString}, ${timeString}`;
+
+                // Determine badge class
+                let badgeClass = 'badge-hadir';
+                let iconClass = 'fa-user-check';
+                if (row.kehadiran === 'Sakit') {
+                    badgeClass = 'badge-sakit';
+                    iconClass = 'fa-house-medical';
+                } else if (row.kehadiran === 'Izin') {
+                    badgeClass = 'badge-izin';
+                    iconClass = 'fa-envelope-open-text';
+                }
+
+                // File Upload display
+                const hasFile = !!row.surat_filename;
+                const viewBtnHtml = hasFile 
+                    ? `<button class="btn-view-doc" onclick="showFileModal(${row.id}, '${row.nama.replace(/'/g, "\\'")}', '${row.nisn}')">
+                         <i class="fa-regular fa-image"></i> Lihat Surat
+                       </button>`
+                    : `<button class="btn-view-doc disabled" disabled>
+                         <i class="fa-solid fa-ban"></i> Tidak Ada
+                       </button>`;
+
+                tr.innerHTML = `
+                    <td>
+                        <div class="student-name-col">
+                            <div class="student-avatar">${getInitials(row.nama)}</div>
+                            <div>
+                                <span style="font-weight: 600;">${row.nama}</span>
+                                <span class="student-email">${row.email}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-weight: 500; font-size: 13px; color: var(--text-secondary);">${row.nisn}</td>
+                    <td>
+                        <span class="badge ${badgeClass}">
+                            <i class="fa-solid ${iconClass}"></i> ${row.kehadiran}
+                        </span>
+                    </td>
+                    <td style="color: ${row.alasan ? 'var(--text-primary)' : 'var(--text-secondary)'}; font-style: ${row.alasan ? 'normal' : 'italic'};">
+                        ${row.alasan || 'Tidak ada alasan'}
+                    </td>
+                    <td style="font-size: 13px; color: var(--text-secondary);">${formattedTime}</td>
+                    <td>${viewBtnHtml}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // File Viewer Modal Logic
+        const modal = document.getElementById('preview_modal');
+        
+        function showFileModal(id, name, nisn) {
+            document.getElementById('modal_student_name').textContent = `Surat Bukti: ${name}`;
+            document.getElementById('modal_student_info').textContent = `NISN: ${nisn}`;
+            
+            // Set image source to local stream endpoint
+            const imgSrc = `/api/attendance/surat/${id}`;
+            document.getElementById('modal_img').src = imgSrc;
+            document.getElementById('modal_download_btn').href = imgSrc;
+            
+            modal.classList.add('show');
+        }
+
+        function closeModal() {
+            modal.classList.remove('show');
+            document.getElementById('modal_img').src = ''; // Clear source to stop load
+        }
+
+        // Bind UI Elements
+        document.getElementById('modal_close_btn').addEventListener('click', closeModal);
+        document.getElementById('modal_cancel_btn').addEventListener('click', closeModal);
+        
+        // Close modal when clicking background overlay
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // Search and Filter updates
+        document.getElementById('search_input').addEventListener('input', renderDashboard);
+        document.getElementById('filter_kehadiran').addEventListener('change', renderDashboard);
+
+        // Export data to CSV
+        document.getElementById('btn_export').addEventListener('click', () => {
+            if (attendanceData.length === 0) {
+                alert('Tidak ada data untuk diexport.');
+                return;
+            }
+
+            // CSV Header
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "ID,NISN,Email,Nama,Kehadiran,Alasan,Tanggal & Waktu\n";
+
+            // CSV Rows
+            attendanceData.forEach(row => {
+                const cleanName = row.nama.replace(/"/g, '""');
+                const cleanAlasan = (row.alasan || '').replace(/"/g, '""');
+                const cleanDate = new Date(row.created_at).toLocaleString('id-ID');
+                
+                csvContent += `${row.id},${row.nisn},"${row.email}","${cleanName}",${row.kehadiran},"${cleanAlasan}","${cleanDate}"\n`;
+            });
+
+            // Trigger Download
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Data_Presensi_X-5_${new Date().toLocaleDateString('id-ID')}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Initial fetch
+        fetchAttendance();
+        
+        // Auto-refresh stats every 10 seconds
+        setInterval(fetchAttendance, 10000);
+    </script>
+</body>
+</html>

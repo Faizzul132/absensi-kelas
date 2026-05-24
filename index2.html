@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presensi Siswa</title>
+    <!-- Import Google Font Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style2.css?v=2">
+</head>
+<body>
+    <div class="phone-container">
+        <div class="input">
+                <input type="text" class="input_nama" readonly> 
+                <!-- untuk input nama (otomatis terisi) -->
+                <select class="input_kehadiran" required>
+                    <option value="" disabled selected>Pilih Kehadiran</option>
+                    <option value="Hadir">Hadir</option>
+                    <option value="Sakit">Sakit</option>
+                    <option value="Izin">Izin</option>
+                </select>
+                <!-- untuk input kehadiran -->
+                <input type="text" class="input_alasan" placeholder="Alasan (Jika Sakit/Izin)"> 
+                <!-- untuk input alasan jika tidak hadir -->
+        </div>
+        <button class="tombol_next" id="btn_next">Next</button>
+
+        <div id="error_modal" style="display:none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: #ff3333; color: white; padding: 15px 25px; border-radius: 8px; font-family: sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.2); z-index: 1000; font-weight: bold; transition: all 0.3s ease;">
+            Error message
+        </div>
+    </div>
+
+    <script>
+        // Check if student logged in
+        const nisn = sessionStorage.getItem('student_nisn');
+        const email = sessionStorage.getItem('student_email');
+        const nama = sessionStorage.getItem('student_nama');
+
+        if (!nisn || !email || !nama) {
+            alert('Silakan login terlebih dahulu!');
+            window.location.href = 'index.html';
+        }
+
+        // Set student name in input
+        document.querySelector('.input_nama').value = nama;
+
+        // Dynamic Alasan field toggling (optional, but good UX)
+        const kehadiranSelect = document.querySelector('.input_kehadiran');
+        const alasanInput = document.querySelector('.input_alasan');
+        
+        kehadiranSelect.addEventListener('change', () => {
+            if (kehadiranSelect.value === 'Hadir') {
+                alasanInput.value = '';
+                alasanInput.disabled = true;
+                alasanInput.placeholder = 'Tidak memerlukan alasan';
+            } else {
+                alasanInput.disabled = false;
+                alasanInput.placeholder = 'Alasan (Wajib diisi)';
+            }
+        });
+
+        document.getElementById('btn_next').addEventListener('click', async (e) => {
+            e.preventDefault();
+            
+            const kehadiran = kehadiranSelect.value;
+            const alasan = alasanInput.value.trim();
+            const errorModal = document.getElementById('error_modal');
+
+            function showError(msg) {
+                errorModal.textContent = msg;
+                errorModal.style.display = 'block';
+                setTimeout(() => {
+                    errorModal.style.display = 'none';
+                }, 4000);
+            }
+
+            if (!kehadiran) {
+                showError('Pilih status kehadiran Anda!');
+                return;
+            }
+
+            if (kehadiran !== 'Hadir' && !alasan) {
+                showError('Tuliskan alasan ketidakhadiran Anda!');
+                return;
+            }
+
+            // Save choices to sessionStorage
+            sessionStorage.setItem('attendance_kehadiran', kehadiran);
+            sessionStorage.setItem('attendance_alasan', alasan);
+
+            if (kehadiran === 'Hadir') {
+                // If Hadir, submit immediately to the database and go to index4.html
+                try {
+                    const response = await fetch('/api/attendance', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            nisn,
+                            email,
+                            nama,
+                            kehadiran,
+                            alasan: ''
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                        window.location.href = 'index4.html';
+                    } else {
+                        showError(result.message || 'Gagal menyimpan kehadiran.');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showError('Gagal menghubungi server.');
+                }
+            } else {
+                // If Sakit/Izin, go to index3.html for uploading proof letter/photo
+                window.location.href = 'index3.html';
+            }
+        });
+    </script>
+</body>
+</html>

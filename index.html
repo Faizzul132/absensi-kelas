@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presensi Siswa</title>
+    <!-- Import Google Font Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+    <div class="phone-container">
+        <div class="input">
+                <input type="email" class="input_email" placeholder="Email" required> 
+                <!-- untuk input email -->
+                <input type="text" class="input_nis" placeholder="NIS" required> 
+                <!-- untuk input nis -->
+                <input type="password" class="input_password" placeholder="Password" required> 
+                <!-- untuk input password -->
+        </div>
+        <button class="tombol_next" id="btn_next">Next</button>
+
+        <div id="error_modal" style="display:none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: #ff3333; color: white; padding: 15px 25px; border-radius: 8px; font-family: sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.2); z-index: 1000; font-weight: bold; transition: all 0.3s ease;">
+            Error message
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('btn_next').addEventListener('click', async (e) => {
+            e.preventDefault();
+            
+            const email = document.querySelector('.input_email').value.trim();
+            const nisn = document.querySelector('.input_nis').value.trim();
+            const password = document.querySelector('.input_password').value.trim();
+            const errorModal = document.getElementById('error_modal');
+
+            function showError(msg) {
+                errorModal.textContent = msg;
+                errorModal.style.display = 'block';
+                setTimeout(() => {
+                    errorModal.style.display = 'none';
+                }, 4000);
+            }
+
+            if (!email || !nisn || !password) {
+                showError('Semua field wajib diisi!');
+                return;
+            }
+
+            // Simple email validation
+            if (!email.includes('@')) {
+                showError('Format email tidak valid!');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, nisn, password })
+                });
+
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    // Save to session storage
+                    sessionStorage.setItem('student_email', email);
+                    sessionStorage.setItem('student_nisn', result.student.nisn);
+                    sessionStorage.setItem('student_nama', result.student.nama);
+                    sessionStorage.setItem('student_kelas', result.student.kelas);
+                    
+                    // Redirect to index2.html
+                    window.location.href = 'index2.html';
+                } else {
+                    showError(result.message || 'Login gagal, silakan periksa kembali data Anda.');
+                }
+            } catch (err) {
+                console.error(err);
+                showError('Gagal menghubungkan ke server.');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presensi Siswa</title>
+    <!-- Import Google Font Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #bae6fd;
+            background-image: radial-gradient(circle at center, #f0f9ff 0%, #bae6fd 100%);
+        }
+        .phone-container {
+            width: 414px;
+            height: 896px;
+            background-image: url('hal4.png');
+            background-repeat: no-repeat;
+            background-size: 414px 896px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+        }
+        @media (max-width: 420px) {
+            body {
+                display: block;
+                background: none;
+            }
+            .phone-container {
+                width: 100%;
+                height: 100vh;
+                border-radius: 0;
+                box-shadow: none;
+                background-size: 100% 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+    </div>
+    
+    <script>
+        // Clear student session data so another student can log in
+        sessionStorage.clear();
+    </script>
+</body>
+</html>
