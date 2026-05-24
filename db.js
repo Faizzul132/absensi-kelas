@@ -62,8 +62,8 @@ function convertSql(sql) {
 function dbRun(sql, params = []) {
   return new Promise((resolve, reject) => {
     let finalSql = convertSql(sql);
-    // Tambah RETURNING id untuk INSERT di Postgres
-    if (isPostgres && /^\s*INSERT\s/i.test(finalSql) && !/RETURNING/i.test(finalSql)) {
+    // Tambah RETURNING id untuk INSERT di Postgres (khusus untuk tabel attendance yang memiliki kolom id autoincrement)
+    if (isPostgres && /^\s*INSERT\s/i.test(finalSql) && !/RETURNING/i.test(finalSql) && /attendance/i.test(finalSql)) {
       finalSql = finalSql.trimEnd().replace(/;?\s*$/, '') + ' RETURNING id';
     }
     if (isPostgres) {
@@ -224,15 +224,33 @@ async function importExcelData() {
 module.exports = {
   db: {
     run: (sql, params, cb) => {
-      dbRun(sql, params).then(res => cb(null, res)).catch(cb);
+      const callback = typeof params === 'function' ? params : cb;
+      const args     = typeof params === 'function' ? []     : params;
+      dbRun(sql, args).then(res => {
+        if (callback) {
+          callback.call({ lastID: res.lastID, changes: res.changes }, null, res);
+        }
+      }).catch(err => {
+        if (callback) callback(err);
+      });
     },
     get: (sql, params, cb) => {
-      dbGet(sql, params).then(res => cb(null, res)).catch(cb);
+      const callback = typeof params === 'function' ? params : cb;
+      const args     = typeof params === 'function' ? []     : params;
+      dbGet(sql, args).then(res => {
+        if (callback) callback(null, res);
+      }).catch(err => {
+        if (callback) callback(err);
+      });
     },
     all: (sql, params, cb) => {
       const callback = typeof params === 'function' ? params : cb;
       const args     = typeof params === 'function' ? []     : params;
-      dbAllRows(sql, args).then(res => callback(null, res)).catch(callback);
+      dbAllRows(sql, args).then(res => {
+        if (callback) callback(null, res);
+      }).catch(err => {
+        if (callback) callback(err);
+      });
     }
   },
   initDb
