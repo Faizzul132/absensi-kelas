@@ -1,21 +1,7 @@
 {
   "version": 2,
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/monitor.js"
-    },
-    {
-      "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf))",
-      "dest": "/$1"
-    },
-    {
-      "src": "/monitor.html",
-      "dest": "/monitor.html"
-    },
-    {
-      "src": "/",
-      "dest": "/monitor.html"
-    }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/monitor.js" },
+    { "source": "/", "destination": "/monitor.html" }
   ]
 }
